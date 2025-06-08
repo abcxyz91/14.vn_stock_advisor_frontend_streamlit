@@ -25,7 +25,7 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-@st.cache_data(ttl=14400) # Cache for 4 hours
+@st.cache_data(ttl=3600) # Cache for 1 hours
 def get_response(user_input):
     """Get response from crewAI API"""
     # Start crew execution

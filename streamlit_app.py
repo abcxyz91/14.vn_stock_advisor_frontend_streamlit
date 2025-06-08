@@ -111,8 +111,18 @@ if st.session_state.result and not st.session_state.analyzing:
         st.caption(f"**Ngành:** {result.get('industry', 'N/A')}")
         st.caption(f"**Ngày phân tích:** {result.get('today_date', 'N/A')}")
         if "giữ" in decision_lower:
-            st.caption(result.get('buy_price', 'Không có giá mua khuyến nghị.'))
-            st.caption(result.get('sell_price', 'Không có giá bán khuyến nghị.'))
+            buy_price = result.get('buy_price')
+            sell_price = result.get('sell_price')
+            
+            if isinstance(buy_price, (int, float)):
+                st.caption(f"Giá mua khuyến nghị: {buy_price * 1000:,.0f} VND")
+            else:
+                st.caption('Không có giá mua khuyến nghị.')
+                
+            if isinstance(sell_price, (int, float)):
+                st.caption(f"Giá bán khuyến nghị: {sell_price * 1000:,.0f} VND")
+            else:
+                st.caption('Không có giá bán khuyến nghị.')
 
     st.markdown("---") # Visual separator
     st.markdown("### 📝 Phân tích chi tiết")
