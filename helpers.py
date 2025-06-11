@@ -148,7 +148,7 @@ def show_candlestick_chart(df, ticker):
                                           high=df['high']*1000,
                                           low=df['low']*1000,
                                           close=df['close']*1000)])
-    fig.update_layout(title=f"Candlestick Chart for {ticker}",
+    fig.update_layout(title=f"Biểu đồ giá {ticker}",
                       xaxis_title="Date",
                       yaxis_title="Price (VND)",
                       xaxis_rangeslider_visible=False)

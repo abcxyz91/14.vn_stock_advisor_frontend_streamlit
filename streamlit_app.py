@@ -37,19 +37,28 @@ if submit_button:
     st.session_state.ticker = ticker_input
     st.session_state.result = None # Reset previous result
     st.session_state.error = None   # Reset previous error
+    st.session_state.analyzing = False  # Reset analyzing state
     
     if not st.session_state.ticker:
         st.session_state.error = "⚠️ Vui lòng nhập mã cổ phiếu."
+        st.session_state.analyzing = False
     elif not is_valid_vn_ticker(st.session_state.ticker):
         st.session_state.error = "⚠️ Mã cổ phiếu không hợp lệ. Vui lòng nhập mã 3-4 kí tự (VD: FPT)."
+        st.session_state.analyzing = False
     else:
         st.session_state.analyzing = True # Start analysis
         # Re-run to show spinner and disable button
         st.rerun() 
 
-# This block runs if analyzing is true (after the rerun from submit)
-# Display the chart in Streamlit only if we have a valid ticker
-if st.session_state.ticker and not st.session_state.error:
+# Display error message if any
+if st.session_state.error:
+    st.error(st.session_state.error)
+    # Exit early if there's an error - don't proceed with chart or analysis
+    st.stop()
+
+# This block runs if we have a valid ticker (no errors) (after the rerun from submit)
+# Display the chart in Streamlit
+if st.session_state.ticker:
     chart_data = get_stock_dataframe(st.session_state.ticker)
     if chart_data is not None:
         fig = show_candlestick_chart(chart_data, st.session_state.ticker)
@@ -59,24 +68,33 @@ if st.session_state.ticker and not st.session_state.error:
         if st.checkbox("Show raw data"):
             st.dataframe(chart_data)
     else:
-        st.error("❌ Không thể tải dữ liệu cổ phiếu. Vui lòng kiểm tra mã cổ phiếu hoặc thử lại sau.")
+        # If no data is returned, set error state, set analyzing state and stop further processing
+        st.session_state.error = "❌ Không thể tải dữ liệu cổ phiếu. Vui lòng kiểm tra mã cổ phiếu hoặc thử lại sau."
+        st.session_state.analyzing = False
+        st.error(st.session_state.error)
+        st.rerun()
+        st.stop()
 
-if st.session_state.analyzing and not st.session_state.error: # also check no prior validation error
+# Only proceed with analysis if analyzing flag is true and we have no errors
+if st.session_state.analyzing:
     with st.spinner(f"⏳ Các AI Agents đang tổng hợp và phân tích mã {st.session_state.ticker}... Thời gian chờ có thể lên tới 2-3 phút."):
         response_data = get_response(st.session_state.ticker)
 
     if response_data and response_data.get("status") == "error":
         st.session_state.error = f"❌ {response_data.get('error', 'Đã xảy ra lỗi không xác định trong quá trình phân tích.')}"
+        st.session_state.analyzing = False
+        st.error(st.session_state.error)
+        st.stop()
     elif response_data:
         st.session_state.result = response_data
-    else: # Should not happen if get_response always returns a dict
+    else:
         st.session_state.error = "❌ Không nhận được phản hồi từ hệ thống phân tích."
+        st.session_state.analyzing = False
+        st.error(st.session_state.error)
+        st.stop()
+
     st.session_state.analyzing = False # Analysis finished
     st.rerun() # Rerun to update UI based on new state (result or error)
-
-# Display error message if any, and analysis is not in progress
-if st.session_state.error and not st.session_state.analyzing:
-    st.error(st.session_state.error)
 
 # Display result if available, and analysis is not in progress
 if st.session_state.result and not st.session_state.analyzing:
