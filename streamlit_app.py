@@ -132,12 +132,12 @@ if st.session_state.result and not st.session_state.analyzing:
             buy_price = result.get('buy_price')
             sell_price = result.get('sell_price')
             
-            if isinstance(buy_price, (int, float)):
+            if isinstance(buy_price, (int, float)) and buy_price > 0:
                 st.caption(f"Giá mua khuyến nghị: {buy_price:,.0f} VND")
             else:
                 st.caption('Không có giá mua khuyến nghị.')
                 
-            if isinstance(sell_price, (int, float)):
+            if isinstance(sell_price, (int, float)) and sell_price > 0:
                 st.caption(f"Giá bán khuyến nghị: {sell_price:,.0f} VND")
             else:
                 st.caption('Không có giá bán khuyến nghị.')
