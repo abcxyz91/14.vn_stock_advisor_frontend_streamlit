@@ -2,7 +2,7 @@ import streamlit as st
 from helpers import get_response, is_valid_vn_ticker, get_stock_dataframe, show_candlestick_chart
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="VN Stock Advisor", layout="centered", initial_sidebar_state="auto")
+st.set_page_config(page_title="VN Stock Advisor", layout="wide", initial_sidebar_state="auto")
 
 st.title("📈 VN Stock Advisor", anchor=False)
 st.subheader("🤖 Phân tích cổ phiếu Việt bằng AI Agent", anchor=False)
@@ -57,103 +57,106 @@ if st.session_state.error:
     st.stop()
 
 # This block runs if we have a valid ticker (no errors) (after the rerun from submit)
-# Display the chart in Streamlit
-if st.session_state.ticker:
-    chart_data = get_stock_dataframe(st.session_state.ticker)
-    if chart_data is not None:
-        fig = show_candlestick_chart(chart_data, st.session_state.ticker)
-        st.plotly_chart(fig, use_container_width=True)
+chart_col, analyze_col = st.columns(2)
+with chart_col:
+    # Display the chart in Streamlit
+    if st.session_state.ticker:
+        chart_data = get_stock_dataframe(st.session_state.ticker)
+        if chart_data is not None:
+            fig = show_candlestick_chart(chart_data, st.session_state.ticker)
+            st.plotly_chart(fig, use_container_width=True)
 
-        # Optional: Show the data table
-        if st.checkbox("Show raw data"):
-            st.dataframe(chart_data)
-    else:
-        # If no data is returned, set error state, set analyzing state and stop further processing
-        st.session_state.error = "❌ Không thể tải dữ liệu cổ phiếu. Vui lòng kiểm tra mã cổ phiếu hoặc thử lại sau."
-        st.session_state.analyzing = False
-        st.error(st.session_state.error)
-        st.rerun()
-        st.stop()
-
-# Only proceed with analysis if analyzing flag is true and we have no errors
-if st.session_state.analyzing:
-    with st.spinner(f"⏳ Các AI Agents đang tổng hợp và phân tích mã {st.session_state.ticker}... Thời gian chờ có thể lên tới 2-3 phút."):
-        response_data = get_response(st.session_state.ticker)
-
-    if response_data and response_data.get("status") == "error":
-        st.session_state.error = f"❌ {response_data.get('error', 'Đã xảy ra lỗi không xác định trong quá trình phân tích.')}"
-        st.session_state.analyzing = False
-        st.error(st.session_state.error)
-        st.stop()
-    elif response_data:
-        st.session_state.result = response_data
-    else:
-        st.session_state.error = "❌ Không nhận được phản hồi từ hệ thống phân tích."
-        st.session_state.analyzing = False
-        st.error(st.session_state.error)
-        st.stop()
-
-    st.session_state.analyzing = False # Analysis finished
-    st.rerun() # Rerun to update UI based on new state (result or error)
-
-# Display result if available, and analysis is not in progress
-if st.session_state.result and not st.session_state.analyzing:
-    result = st.session_state.result
-    
-    st.markdown("---") # Visual separator
-    
-    # Using columns for layout
-    col1, col2 = st.columns([0.8, 1.2]) # Adjusted column ratio for better balance
-
-    with col1:
-        # Display the ticker prominently using st.subheader
-        st.subheader(f"Mã: {result.get('stock_ticker', 'N/A')}", anchor=False)
-        
-        # Display the investment decision using Streamlit's colored message boxes
-        decision = result.get('decision', 'N/A')
-        if decision and isinstance(decision, str): # Ensure decision is a non-empty string
-            decision_lower = decision.lower()
-            if "mua" in decision_lower:
-                st.success(f"**Khuyến nghị: {decision.upper()}** 👍")
-            elif "bán" in decision_lower: # More flexible check for "Bán"
-                st.error(f"**Khuyến nghị: {decision.upper()}** 👎")
-            else: # For "Trung lập" or other neutral decisions
-                st.warning(f"**Khuyến nghị: {decision.upper()}** ⚖️")
+            # Optional: Show the data table
+            if st.checkbox("Show raw data"):
+                st.dataframe(chart_data)
         else:
-            st.info("**Khuyến nghị: Không có**")
+            # If no data is returned, set error state, set analyzing state and stop further processing
+            st.session_state.error = "❌ Không thể tải dữ liệu cổ phiếu. Vui lòng kiểm tra mã cổ phiếu hoặc thử lại sau."
+            st.session_state.analyzing = False
+            st.error(st.session_state.error)
+            st.rerun()
+            st.stop()
 
+with analyze_col:
+    # Only proceed with analysis if analyzing flag is true and we have no errors
+    if st.session_state.analyzing:
+        with st.spinner(f"⏳ Các AI Agents đang tổng hợp và phân tích mã {st.session_state.ticker}... Thời gian chờ có thể lên tới 2-3 phút."):
+            response_data = get_response(st.session_state.ticker)
 
-    with col2:
-        # Display company name, industry, and analysis date
-        st.markdown(f"**Tên công ty:** {result.get('full_name', 'Không có thông tin')}")
-        st.caption(f"**Ngành:** {result.get('industry', 'N/A')}")
-        st.caption(f"**Ngày phân tích:** {result.get('today_date', 'N/A')}")
-        if "giữ" in decision_lower:
-            buy_price = result.get('buy_price')
-            sell_price = result.get('sell_price')
+        if response_data and response_data.get("status") == "error":
+            st.session_state.error = f"❌ {response_data.get('error', 'Đã xảy ra lỗi không xác định trong quá trình phân tích.')}"
+            st.session_state.analyzing = False
+            st.error(st.session_state.error)
+            st.stop()
+        elif response_data:
+            st.session_state.result = response_data
+        else:
+            st.session_state.error = "❌ Không nhận được phản hồi từ hệ thống phân tích."
+            st.session_state.analyzing = False
+            st.error(st.session_state.error)
+            st.stop()
+
+        st.session_state.analyzing = False # Analysis finished
+        st.rerun() # Rerun to update UI based on new state (result or error)
+
+    # Display result if available, and analysis is not in progress
+    if st.session_state.result and not st.session_state.analyzing:
+        result = st.session_state.result
+        
+        st.markdown("---") # Visual separator
+        
+        # Using columns for layout
+        col1, col2 = st.columns([0.8, 1.2]) # Adjusted column ratio for better balance
+
+        with col1:
+            # Display the ticker prominently using st.subheader
+            st.subheader(f"Mã: {result.get('stock_ticker', 'N/A')}", anchor=False)
             
-            if isinstance(buy_price, (int, float)) and buy_price > 0:
-                st.caption(f"Giá mua khuyến nghị: {buy_price:,.0f} VND")
+            # Display the investment decision using Streamlit's colored message boxes
+            decision = result.get('decision', 'N/A')
+            if decision and isinstance(decision, str): # Ensure decision is a non-empty string
+                decision_lower = decision.lower()
+                if "mua" in decision_lower:
+                    st.success(f"**Khuyến nghị: {decision.upper()}** 👍")
+                elif "bán" in decision_lower: # More flexible check for "Bán"
+                    st.error(f"**Khuyến nghị: {decision.upper()}** 👎")
+                else: # For "Trung lập" or other neutral decisions
+                    st.warning(f"**Khuyến nghị: {decision.upper()}** ⚖️")
             else:
-                st.caption('Không có giá mua khuyến nghị.')
+                st.info("**Khuyến nghị: Không có**")
+
+
+        with col2:
+            # Display company name, industry, and analysis date
+            st.markdown(f"**Tên công ty:** {result.get('full_name', 'Không có thông tin')}")
+            st.caption(f"**Ngành:** {result.get('industry', 'N/A')}")
+            st.caption(f"**Ngày phân tích:** {result.get('today_date', 'N/A')}")
+            if "giữ" in decision_lower:
+                buy_price = result.get('buy_price')
+                sell_price = result.get('sell_price')
                 
-            if isinstance(sell_price, (int, float)) and sell_price > 0:
-                st.caption(f"Giá bán khuyến nghị: {sell_price:,.0f} VND")
-            else:
-                st.caption('Không có giá bán khuyến nghị.')
+                if isinstance(buy_price, (int, float)) and buy_price > 0:
+                    st.caption(f"Giá mua khuyến nghị: {buy_price:,.0f} VND")
+                else:
+                    st.caption('Không có giá mua khuyến nghị.')
+                    
+                if isinstance(sell_price, (int, float)) and sell_price > 0:
+                    st.caption(f"Giá bán khuyến nghị: {sell_price:,.0f} VND")
+                else:
+                    st.caption('Không có giá bán khuyến nghị.')
 
-    st.markdown("---") # Visual separator
-    st.markdown("### 📝 Phân tích chi tiết")
+        st.markdown("---") # Visual separator
+        st.markdown("### 📝 Phân tích chi tiết")
 
-    # Using expanders for different analysis sections
-    with st.expander("**🌍 Phân tích thị trường vĩ mô**", expanded=False):
-        st.write(result.get('macro_reasoning', 'Không có dữ liệu phân tích thị trường.'))
+        # Using expanders for different analysis sections
+        with st.expander("**🌍 Phân tích thị trường vĩ mô**", expanded=False):
+            st.write(result.get('macro_reasoning', 'Không có dữ liệu phân tích thị trường.'))
 
-    with st.expander("**🏢 Phân tích cơ bản (Doanh nghiệp)**", expanded=False):
-        st.write(result.get('fund_reasoning', 'Không có dữ liệu phân tích cơ bản.'))
+        with st.expander("**🏢 Phân tích cơ bản**", expanded=False):
+            st.write(result.get('fund_reasoning', 'Không có dữ liệu phân tích cơ bản.'))
 
-    with st.expander("**📊 Phân tích kĩ thuật**", expanded=False):
-        st.write(result.get('tech_reasoning', 'Không có dữ liệu phân tích kĩ thuật.'))
+        with st.expander("**📊 Phân tích kĩ thuật**", expanded=False):
+            st.write(result.get('tech_reasoning', 'Không có dữ liệu phân tích kĩ thuật.'))
 
 # ---  Disclaimer Section ---
 st.markdown("---") # Visual separator
